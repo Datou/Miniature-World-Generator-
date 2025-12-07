@@ -1,52 +1,48 @@
 import { GoogleGenAI } from "@google/genai";
 import { EngineeredPrompt, AspectRatio, ImageSize } from "../types";
 
-// Helper to get the AI client
 const getAiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 };
 
 // ============================================================================
-// 1. SYSTEM INSTRUCTION (Narrative Engine Upgrade)
+// 1. SYSTEM INSTRUCTION
+// Optimized for "Poster Layout" (Text Space + Floating Island)
 // ============================================================================
 const PROMPT_ENGINEERING_SYSTEM_INSTRUCTION = `
-You are a world-class Prompt Engineer and Art Director specializing in 3D Miniature Isometric Poster Art.
-Your goal is to transform user inputs into rigorous image generation prompts.
+You are a world-class Prompt Engineer and Art Director.
+You have access to Google Search.
 
-**CORE PHILOSOPHY: STORYTELLING > DESCRIPTION**
-When generating a scene, especially from text, do not just describe objects. You must construct a **NARRATIVE SCENE**.
-*   **Formula:** Storytelling = Key Moment (Action/Aftermath) + Micro-Clues (Details) + Mood (Lighting).
-*   **Example:** Instead of "A writer's desk", describe "A chaotic desk at 3 AM, brimming with crumpled paper balls, a cold cup of coffee, and a single glowing laptop screen showing 'Chapter 1'."
+**CRITICAL LAYOUT RULE: THE "VERTICAL POSTER COMPOSITION"**
+You are NOT just generating a 3D object. You are generating a **POSTER**.
+1.  **Split Composition:**
+    *   **Top 20%:** Empty negative space for the TITLE.
+    *   **Middle 60%:** The 3D Floating Isometric Island (The Subject).
+    *   **Bottom 20%:** Empty negative space for the SUBTITLE/DATA.
+2.  **Camera Distance:** The camera MUST be zoomed out ("Wide Shot") to ensure the 3D object does not touch the text areas.
 
-**CRITICAL PRIORITY - INPUT HANDLING:**
+**INPUT HANDLING STRATEGY:**
 
-**CASE A: REFERENCE IMAGE PROVIDED (Style Transfer)**
-1.  **Subject:** Use the reference image strictly for the *Subject Design* (character/object shape).
-2.  **Layout:** IGNORE the reference camera angle. Force the subject into a centralized 3D Isometric Diorama.
-3.  **Action:** "Transfigure the subject into a cute, high-fidelity matte clay/resin miniature."
+**CASE A: REAL-TIME DATA (Stocks / Weather)**
+1.  **Tool:** Search for live data.
+2.  **Visual:** Create a **Floating Concept Art** representing the data.
+    *   *Example:* "A glass tree with golden apples" (Good Stock) or "A storm over a stone fortress" (Bad Stock).
+3.  **Subtitle:** STRICTLY the data found (e.g., "$242.50 ▲ +1.25%").
 
-**CASE B: POETRY / LITERATURE (Emotional Narrative)**
-1.  **Text Extraction:** Use the **FULL Title** and the **Original Verses** (not translations) for the Subtitle.
-2.  **Visual Translation:** Convert the poem's imagery into a specific **"Frozen Moment"**.
-    *   *If the poem mentions "Moonlight on the river", do not just draw a river. Draw a tiny boat with a lantern, drifting alone, with a wine jug left on the deck.*
+**CASE B: POETRY / STORY**
+1.  **Visual:** A "Frozen Moment" on a diorama base.
+2.  **Text:** Full Title + Key Verse.
 
-**CASE C: TEXT ONLY / ABSTRACT / WEATHER (Visual Metaphor)**
-1.  **Concept:** If the user types "Stock Market", draw a "Bull and Bear fighting on a cliff made of gold coins".
-2.  **Atmosphere:** Use lighting to tell the story (e.g., "Warm golden hour sunlight casting long shadows" for nostalgia, "Cyberpunk neon reflection" for modern vibes).
-3.  **Detail Density:** Populate the isometric base with "Micro-Clues"—tiny scattered objects that imply life and history.
-
-**VISUAL STYLE REQUIREMENTS (Enforced in 'visualPrompt'):**
-1.  **Format:** Vertical (9:16) poster.
-2.  **Composition:** A floating **Isometric Island/Cube** in the center. 
-    *   *Crucial:* Surrounded by clean negative space (top and bottom) to allow room for text.
-3.  **Materials:** Stop-motion clay animation style, soft bevels, tilt-shift photography effect (shallow depth of field).
+**CASE C: REFERENCE IMAGE**
+1.  **Action:** "Extract the subject and place it on a new clean isometric base."
+2.  **Constraint:** Keep the subject in the MIDDLE 60% zone.
 
 **OUTPUT FORMAT (JSON):**
 Structure:
 {
-  "posterTitle": "The exact title (or short punchy text)",
-  "posterSubtitle": "The verses, context, or a storytelling sentence",
-  "visualPrompt": "The detailed prompt. START with: 'A vertical poster featuring a 3D isometric miniature diorama...'. DESCRIBE the 'Frozen Moment' and 'Micro-Clues'. SPECIFY 'Title [X] at the top, Subtitle [Y] at the bottom'."
+  "posterTitle": "The Title String",
+  "posterSubtitle": "The Subtitle String",
+  "visualPrompt": "The detailed prompt. IMPORTANT: You MUST explicitly include the text instructions inside this string. Example: '...Render the text [Title] in the top space. Render the text [Subtitle] in the bottom space.'"
 }
 `;
 
@@ -72,8 +68,15 @@ export const engineerPrompt = async (
       });
     }
     
-    const userMessage = inputText 
-      ? `User Request: ${inputText}` 
+    // Explicitly prompt for search if keywords are present
+    let finalInputText = inputText;
+    const dataKeywords = ["stock", "price", "weather", "news", "score", "bitcoin", "btc", "eth"];
+    if (dataKeywords.some(kw => inputText.toLowerCase().includes(kw))) {
+        finalInputText = `User Query: "${inputText}". \nINSTRUCTION: USE GOOGLE SEARCH to find the current live data value. Put the EXACT number in the 'posterSubtitle'.`;
+    }
+
+    const userMessage = finalInputText 
+      ? `User Request: ${finalInputText}` 
       : "User provided an image. Create a 3D Miniature Isometric Poster concept.";
 
     parts.push({ text: userMessage });
@@ -88,7 +91,7 @@ export const engineerPrompt = async (
                 contents: { parts },
                 config: {
                     systemInstruction: PROMPT_ENGINEERING_SYSTEM_INSTRUCTION,
-                    tools: [{ googleSearch: {} }], 
+                    tools: [{ googleSearch: {} }],
                 },
             });
             break; 
@@ -115,7 +118,7 @@ export const engineerPrompt = async (
         throw new Error("Failed to parse generated prompt.");
     }
 
-    // Grounding (Optional)
+    // Grounding
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     if (chunks) {
       data.groundingSources = chunks
@@ -131,7 +134,7 @@ export const engineerPrompt = async (
 };
 
 // ============================================================================
-// 3. GENERATE POSTER IMAGE FUNCTION
+// 3. GENERATE POSTER IMAGE FUNCTION (Layout & Typography Enforcement)
 // ============================================================================
 export const generatePosterImage = async (
   visualPrompt: string, 
@@ -146,10 +149,21 @@ export const generatePosterImage = async (
     const parts: any[] = [];
     let finalPromptText = visualPrompt;
 
-    // --- LOGIC: Handle Image vs Text Scenarios ---
+    // --- KEY MODIFICATION: LAYOUT & TYPOGRAPHY CONSTRAINT ---
+    // We force a "Wide Shot" and explicitly reserve space for text.
+    const layoutConstraint = `
+    [LAYOUT RULES: VERTICAL POSTER]
+    1. CAMERA: Wide Shot / Zoom Out (0.5x). The 3D object must be SMALLER than the canvas.
+    2. PADDING: Ensure 20% empty space at the TOP and 20% empty space at the BOTTOM.
+    3. CENTER: The 3D Floating Island must be strictly in the MIDDLE.
+    
+    [TYPOGRAPHY INSTRUCTION]
+    - Render the TITLE explicitly in the top empty space. Use large, legible, 3D or bold font.
+    - Render the SUBTITLE/DATA explicitly in the bottom empty space. Use clear, contrasting font.
+    - DO NOT overlay text on the 3D model. Keep text on the clean background.
+    `;
 
     if (referenceImageBase64) {
-      // SCENARIO 1: IMAGE PROVIDED (Style Transfer + Re-composition)
       const matches = referenceImageBase64.match(/^data:(.+);base64,(.+)$/);
       const mimeType = matches ? matches[1] : "image/jpeg";
       const data = matches ? matches[2] : referenceImageBase64.split(',')[1];
@@ -159,42 +173,26 @@ export const generatePosterImage = async (
       });
 
       finalPromptText = `
-      [SYSTEM: COMPOSITION OVERRIDE]
-      1. IGNORE the reference image's background and camera angle.
-      2. USE the reference image ONLY for the main character/object design.
-      3. LAYOUT: Create a centralized 3D Isometric Diorama on a solid color background.
+      ${layoutConstraint}
+
+      [SYSTEM: IMAGE REFERENCE MODE]
+      1. ISOLATION: Extract the subject from the reference image.
+      2. RE-COMPOSITION: Place the subject on a floating isometric base in the CENTER.
+      3. BACKGROUND: Clean, solid, infinite background to support text visibility.
       
       [VISUAL DESCRIPTION]
       ${visualPrompt}
-
-      [TEXT PLACEMENT ENFORCEMENT]
-      - TOP: Render the TITLE floating in the upper negative space.
-      - BOTTOM: Render the SUBTITLE/VERSES elegantly at the very bottom.
       `;
-
     } else {
-      // SCENARIO 2: TEXT ONLY (Storytelling & Detail Enforcement)
-      // Since there is no image to constrain the model, we need to add "Quality Boosters"
-      // to ensure the "Story" comes through with high detail.
-      
+      // TEXT ONLY MODE
       finalPromptText = `
-      [SYSTEM: NARRATIVE DIORAMA GENERATION]
-      ACTION: Generate a highly detailed, 3D isometric miniature diorama.
-      STYLE: Clay texture, soft volumetric lighting, tilt-shift photography, 8k resolution.
+      ${layoutConstraint}
+
+      [SYSTEM: GENERATION MODE]
+      Action: Create a self-contained miniature world.
       
-      [STORYTELLING DETAILS]
-      Focus on "environmental storytelling". The scene should look lived-in.
-      - Add scattered small props (books, cups, leaves, tools) relevant to the theme.
-      - Use dramatic lighting to highlight the center of the diorama.
-      
-      [VISUAL PROMPT]
+      [VISUAL DESCRIPTION]
       ${visualPrompt}
-      
-      [TEXT LAYOUT]
-      - Ensure the layout is VERTICAL (9:16).
-      - Leave empty space at the TOP for the Title.
-      - Leave empty space at the BOTTOM for the Subtitle.
-      - Render the text cleanly as instructed in the prompt.
       `;
     }
 
