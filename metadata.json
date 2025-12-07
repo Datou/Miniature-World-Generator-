@@ -1,0 +1,5 @@
+{
+  "name": "Miniature World Generator",
+  "description": "Transforms text or ideas into exquisite 45° isometric 3D miniature poster art using Gemini models.",
+  "requestFramePermissions": []
+}
