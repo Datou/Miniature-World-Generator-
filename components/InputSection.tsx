@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, X, Type, Image as ImageIcon, Sparkles, Settings2 } from 'lucide-react';
 import { AppStatus, UserInput, AspectRatio, ImageSize } from '../types';
@@ -27,6 +26,9 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
       // Iterate using index to avoid iterator issues on some DataTransferItemList implementations
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
+        // Added safety check for item existence
+        if (!item) continue;
+        
         if (item.type.indexOf('image') !== -1) {
           const file = item.getAsFile();
           if (file) {

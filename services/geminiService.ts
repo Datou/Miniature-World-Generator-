@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { EngineeredPrompt, AspectRatio, ImageSize } from "../types";
 
@@ -39,10 +38,12 @@ You must determine the **Target Output Language** based on the following hierarc
     *   **Action:** English.
 
 **CRITICAL LAYOUT RULE: THE "MINIATURE DIORAMA COMPOSITION"**
-1.  **Split Composition:**
-    *   **Top 25%:** Negative space for TITLE (Clean Background).
+1.  **Integrated Composition (Full Bleed):**
+    *   **Top 25%:** Negative space for TITLE. **CRITICAL: The background color must continue here.**
     *   **Middle 50%:** **The Subject is a "Tiny Isometric Diorama" (A floating platform).**
-    *   **Bottom 25%:** Negative space for SUBTITLE (Clean Background).
+    *   **Bottom 25%:** Negative space for SUBTITLE. **CRITICAL: The background color must continue here.**
+    *   **NO WHITE BARS.** The entire canvas must have a unified background color. The text sits directly on the background.
+
 2.  **Scale & Camera:** 
     *   **Create a "Tilt-shift" effect.** The camera must be a **High-Angle Long Shot**.
     *   **CRITICAL:** Characters must be **TINY figurines** (taking up no more than 1/3 of the island's height). 
@@ -210,6 +211,7 @@ export const generatePosterImage = async (
     3. CAMERA: **Isometric High-Angle View (God's Eye View)**. Zoom out significantly to show the entire floating island with plenty of margin around it.
     4. BACKGROUND: Clean, solid, infinite background. MUST fill 100% of the canvas height/width.
     5. NEGATIVE SPACE: Ensure the Top 20% and Bottom 20% are empty of 3D objects (for text placement).
+    **CRITICAL**: The background color must be UNIFORM and FULL BLEED across the entire image (top to bottom). Do NOT render white bars or strips at the top/bottom. The text should be placed directly on the main background color.
     
     [STYLE MODIFIERS]
     - **"Tilt-shift photography"** (blur the background slightly, keep center sharp).
@@ -217,8 +219,8 @@ export const generatePosterImage = async (
     - **"Polly Pocket"** or **"Micro-landscape"**.
     
     [TYPOGRAPHY INSTRUCTION]
-    - Render the TITLE explicitly in the top negative space. 
-    - Render the SUBTITLE explicitly in the bottom negative space.
+    - Render the TITLE explicitly in the top negative space (on the colored background). 
+    - Render the SUBTITLE explicitly in the bottom negative space (on the colored background).
     - FONT: Use a font that matches the language of the text provided in the prompt (e.g. Calligraphy for Chinese, Sans-serif for English).
     `;
 

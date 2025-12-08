@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { EngineeredPrompt, AppStatus } from '../types';
 import { Terminal, Wand2, Link2 } from 'lucide-react';
@@ -47,7 +46,7 @@ const PromptDisplay: React.FC<PromptDisplayProps> = ({ promptData, status }) => 
 
       <div className="flex-grow flex flex-col min-h-0 gap-4">
         {/* Extracted Metadata - Constrained height to ensure it doesn't dominate */}
-        <div className="flex-shrink-0 overflow-y-auto max-h-[35%] custom-scrollbar space-y-4 pr-2">
+        <div className="flex-shrink-0 overflow-y-auto max-h-[40%] custom-scrollbar space-y-4 pr-2">
             <div className="bg-gray-800/40 rounded-lg p-4 border border-gray-700/50">
             <div className="text-xs uppercase tracking-wider text-gray-500 font-bold mb-3">Extracted Metadata</div>
             

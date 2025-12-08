@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AppStatus } from '../types';
 import { Image as ImageIcon, Download, Maximize2 } from 'lucide-react';
@@ -45,7 +44,7 @@ const ImageResult: React.FC<ImageResultProps> = ({ imageBase64, status }) => {
   }
 
   return (
-    <div className="h-full w-full glass-panel rounded-2xl p-2 flex flex-col relative group">
+    <div className="h-full w-full glass-panel rounded-2xl p-2 flex flex-col relative group overflow-hidden">
       <div className="relative flex-grow min-h-0 rounded-xl overflow-hidden bg-black/50 flex items-center justify-center">
         <img 
           src={imageBase64} 

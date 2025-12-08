@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppStatus, EngineeredPrompt, UserInput } from './types';
 import { engineerPrompt, generatePosterImage } from './services/geminiService';
@@ -77,14 +76,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen lg:h-screen w-full bg-[#0d1117] text-gray-200 selection:bg-blue-500/30 flex flex-col relative overflow-hidden">
+    <div className="h-screen w-full bg-[#0d1117] text-gray-200 selection:bg-blue-500/30 flex flex-col relative overflow-hidden">
       {/* Background Ambience */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px]"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-[1800px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col lg:h-full max-h-screen">
+      <div className="relative z-10 w-full max-w-[1800px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col h-full">
         {/* Header */}
         <header className="flex-shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
@@ -116,10 +115,11 @@ const App: React.FC = () => {
         </header>
 
         {/* Main Content - Grid on Desktop, Stack on Mobile */}
-        <main className="flex-grow min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 w-full pb-2">
+        {/* Added lg:grid-rows-[minmax(0,1fr)] to constrain height strictly */}
+        <main className="flex-grow min-h-0 grid grid-cols-1 lg:grid-cols-3 lg:grid-rows-[minmax(0,1fr)] gap-6 w-full pb-2">
           
           {/* Column 1: Input */}
-          <div className="flex flex-col h-full min-h-0 overflow-hidden">
+          <div className="flex flex-col h-auto lg:h-full min-h-0 overflow-hidden">
             <InputSection status={status} onSubmit={handleGenerate} />
           </div>
 
