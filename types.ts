@@ -27,6 +27,7 @@ export interface UserInput {
   imageBase64: string | null;
   aspectRatio: AspectRatio;
   imageSize: ImageSize;
+  forceAnalysis?: boolean;
 }
 
 // Global definition for the AI Studio helper environment

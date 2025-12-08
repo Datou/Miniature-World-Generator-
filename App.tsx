@@ -11,6 +11,9 @@ const App: React.FC = () => {
   const [promptData, setPromptData] = useState<EngineeredPrompt | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // Track parameters of the last successful prompt engineering to enable skipping step 1 on retries
+  const [lastAnalysisParams, setLastAnalysisParams] = useState<{text: string, imageBase64: string | null} | null>(null);
 
   const checkApiKey = async () => {
     try {
@@ -31,20 +34,40 @@ const App: React.FC = () => {
   const handleGenerate = async (input: UserInput) => {
     await checkApiKey();
 
-    setStatus(AppStatus.ANALYZING);
     setErrorMsg(null);
-    setPromptData(null);
     setResultImage(null);
 
+    // Determine if we need to re-run Step 1 (Prompt Engineering)
+    // We only re-run if inputs have changed significantly, if we don't have previous data, OR if forced.
+    const inputsChanged = !lastAnalysisParams || 
+                          lastAnalysisParams.text !== input.text || 
+                          lastAnalysisParams.imageBase64 !== input.imageBase64;
+
+    let currentPromptData = promptData;
+
     try {
-      // Pass navigator.language to service for localization
-      const userLocale = navigator.language;
-      const engineeredData = await engineerPrompt(input.text, input.imageBase64, userLocale);
-      setPromptData(engineeredData);
+      if (input.forceAnalysis || inputsChanged || !currentPromptData) {
+        // STEP 1: Engineer Prompt (Analysis)
+        setStatus(AppStatus.ANALYZING);
+        setPromptData(null); 
+        
+        const userLocale = navigator.language;
+        const engineeredData = await engineerPrompt(input.text, input.imageBase64, userLocale);
+        
+        setPromptData(engineeredData);
+        currentPromptData = engineeredData;
+        setLastAnalysisParams({ text: input.text, imageBase64: input.imageBase64 });
+      }
+
+      // STEP 2: Generate Image
+      // If we skipped Step 1, currentPromptData is already populated
+      if (!currentPromptData) {
+          throw new Error("Prompt data is missing.");
+      }
 
       setStatus(AppStatus.GENERATING_IMAGE);
       const imageUrl = await generatePosterImage(
-          engineeredData.visualPrompt, 
+          currentPromptData.visualPrompt, 
           input.aspectRatio, 
           input.imageSize,
           input.imageBase64
@@ -120,7 +143,11 @@ const App: React.FC = () => {
           
           {/* Column 1: Input */}
           <div className="flex flex-col h-auto lg:h-full min-h-0 overflow-hidden">
-            <InputSection status={status} onSubmit={handleGenerate} />
+            <InputSection 
+                status={status} 
+                onSubmit={handleGenerate} 
+                hasEngineeredPrompt={!!promptData}
+            />
           </div>
 
           {/* Column 2: Prompt Engineering */}

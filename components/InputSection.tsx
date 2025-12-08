@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, X, Type, Image as ImageIcon, Sparkles, Settings2 } from 'lucide-react';
+import { Upload, X, Type, Image as ImageIcon, Sparkles, Settings2, RefreshCw } from 'lucide-react';
 import { AppStatus, UserInput, AspectRatio, ImageSize } from '../types';
 
 interface InputSectionProps {
   status: AppStatus;
   onSubmit: (input: UserInput) => void;
+  hasEngineeredPrompt: boolean;
 }
 
-const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
+const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit, hasEngineeredPrompt }) => {
   const [text, setText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -63,7 +64,7 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (forceAnalysis = false) => {
     if (!text && !imageBase64) return;
     onSubmit({
       text,
@@ -71,6 +72,7 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
       imageBase64,
       aspectRatio,
       imageSize,
+      forceAnalysis
     });
   };
 
@@ -192,31 +194,47 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
         </div>
       </div>
 
-      {/* Submit Button */}
-      <button
-        onClick={handleSubmit}
-        disabled={isLoading || (!text && !imageBase64)}
-        className={`
-          w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-lg flex-shrink-0
-          flex items-center justify-center gap-2
-          ${isLoading 
-            ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/20'
-          }
-        `}
-      >
-        {isLoading ? (
-          <>
-            <span className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
-            <span>Processing...</span>
-          </>
-        ) : (
-          <>
-            <Sparkles size={18} />
-            <span>Generate Miniature World</span>
-          </>
+      {/* Action Buttons */}
+      <div className="flex gap-3 flex-shrink-0">
+        {/* Secondary Force-Regen Button (Only visible if prompt exists) */}
+        {hasEngineeredPrompt && !isLoading && (
+            <button
+                onClick={() => handleSubmit(true)}
+                className="px-4 py-4 rounded-xl font-semibold text-gray-400 bg-gray-800 hover:bg-gray-700 hover:text-white transition-all shadow-lg flex items-center justify-center border border-gray-700 group"
+                title="Redo Prompt Analysis (Force)"
+            >
+                <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+            </button>
         )}
-      </button>
+
+        {/* Main Generate Button */}
+        <button
+            onClick={() => handleSubmit(false)}
+            disabled={isLoading || (!text && !imageBase64)}
+            className={`
+            flex-grow py-4 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-lg
+            flex items-center justify-center gap-2
+            ${isLoading 
+                ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/20'
+            }
+            `}
+        >
+            {isLoading ? (
+            <>
+                <span className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
+                <span>Processing...</span>
+            </>
+            ) : (
+            <>
+                <Sparkles size={18} />
+                <span>
+                    {hasEngineeredPrompt ? 'Generate Image' : 'Generate Miniature World'}
+                </span>
+            </>
+            )}
+        </button>
+      </div>
     </div>
   );
 };
