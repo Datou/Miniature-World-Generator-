@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { EngineeredPrompt, AspectRatio, ImageSize } from "../types";
 
@@ -37,18 +38,21 @@ You must determine the **Target Output Language** based on the following hierarc
 4.  **PRIORITY 4: DEFAULT**
     *   **Action:** English.
 
-**CRITICAL LAYOUT RULE: THE "VERTICAL POSTER COMPOSITION"**
+**CRITICAL LAYOUT RULE: THE "MINIATURE DIORAMA COMPOSITION"**
 1.  **Split Composition:**
-    *   **Top 20%:** Negative space for TITLE.
-    *   **Middle 60%:** The 3D Floating Isometric Island (The Subject).
-    *   **Bottom 20%:** Negative space for SUBTITLE.
-2.  **Zoom:** Camera must be zoomed out (0.5x) to prevent cropping.
+    *   **Top 25%:** Negative space for TITLE (Clean Background).
+    *   **Middle 50%:** **The Subject is a "Tiny Isometric Diorama" (A floating platform).**
+    *   **Bottom 25%:** Negative space for SUBTITLE (Clean Background).
+2.  **Scale & Camera:** 
+    *   **Create a "Tilt-shift" effect.** The camera must be a **High-Angle Long Shot**.
+    *   **CRITICAL:** Characters must be **TINY figurines** (taking up no more than 1/3 of the island's height). 
+    *   **Do NOT produce close-ups or portraits.** The focus is the *entire* floating island environment.
 
 **INPUT HANDLING STRATEGY:**
 
 **CASE A: REFERENCE IMAGE (Style Transfer)**
-- **Action:** Extract the subject and place it on a centralized isometric base.
-- **Visuals:** Describe the scene in English for the generator, but specify the *render text* string in the **Target Output Language** determined above.
+- **Action:** Extract the subject but shrink it down to a "toy figurine" scale placed on a detailed isometric base.
+- **Visuals:** Describe a **"cute 3D clay render, blind box toy style, miniature world"**.
 
 **CASE B: REAL-TIME DATA (Stocks/Weather)**
 - **Tool:** Search for live data.
@@ -198,14 +202,23 @@ export const generatePosterImage = async (
 
     // Layout Constraint Logic
     const layoutConstraint = `
-    [LAYOUT RULES: VERTICAL POSTER]
-    1. CAMERA: Wide Shot / Zoom Out (0.5x). The 3D object must be SMALLER than the canvas.
-    2. PADDING: Ensure 20% empty space at the TOP and 20% empty space at the BOTTOM.
-    3. CENTER: The 3D Floating Island must be strictly in the MIDDLE.
+    [LAYOUT RULES: VERTICAL POSTER - MINIATURE WORLD]
+    1. COMPOSITION: Render a "Floating Isometric Island" in the CENTER.
+    2. SCALE DEFINITION: The image involves a **HUGE Environment** and **TINY Characters**.
+       - The character should look like a small Nendoroid or Lego figure standing on a base.
+       - Character Head-to-Body ratio: 1:2 or 1:3 (Cute/Chibi style), but keep the character SMALL relative to the canvas.
+    3. CAMERA: **Isometric High-Angle View (God's Eye View)**. Zoom out significantly to show the entire floating island with plenty of margin around it.
+    4. BACKGROUND: Clean, solid, infinite background. MUST fill 100% of the canvas height/width.
+    5. NEGATIVE SPACE: Ensure the Top 20% and Bottom 20% are empty of 3D objects (for text placement).
+    
+    [STYLE MODIFIERS]
+    - **"Tilt-shift photography"** (blur the background slightly, keep center sharp).
+    - **"Claymorphism"** or **"3D Blind Box Toy"** style.
+    - **"Polly Pocket"** or **"Micro-landscape"**.
     
     [TYPOGRAPHY INSTRUCTION]
-    - Render the TITLE explicitly in the top empty space. 
-    - Render the SUBTITLE explicitly in the bottom empty space.
+    - Render the TITLE explicitly in the top negative space. 
+    - Render the SUBTITLE explicitly in the bottom negative space.
     - FONT: Use a font that matches the language of the text provided in the prompt (e.g. Calligraphy for Chinese, Sans-serif for English).
     `;
 

@@ -77,16 +77,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#0d1117] text-gray-200 selection:bg-blue-500/30 flex flex-col relative overflow-x-hidden">
+    <div className="min-h-screen lg:h-screen w-full bg-[#0d1117] text-gray-200 selection:bg-blue-500/30 flex flex-col relative overflow-hidden">
       {/* Background Ambience */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px]"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-[1800px] mx-auto p-4 md:p-6 lg:p-8 flex-grow flex flex-col">
+      <div className="relative z-10 w-full max-w-[1800px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col lg:h-full max-h-screen">
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <header className="flex-shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg shadow-blue-500/20">
               <Sparkles className="text-white" size={24} />
@@ -116,20 +116,20 @@ const App: React.FC = () => {
         </header>
 
         {/* Main Content - Grid on Desktop, Stack on Mobile */}
-        <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6 w-full lg:min-h-[600px] pb-8">
+        <main className="flex-grow min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 w-full pb-2">
           
           {/* Column 1: Input */}
-          <div className="flex flex-col lg:h-auto">
+          <div className="flex flex-col h-full min-h-0 overflow-hidden">
             <InputSection status={status} onSubmit={handleGenerate} />
           </div>
 
           {/* Column 2: Prompt Engineering */}
-          <div className="flex flex-col min-h-[400px] lg:h-auto">
+          <div className="flex flex-col h-[400px] lg:h-full min-h-0 overflow-hidden">
             <PromptDisplay status={status} promptData={promptData} />
           </div>
 
           {/* Column 3: Result */}
-          <div className="flex flex-col min-h-[400px] lg:h-auto">
+          <div className="flex flex-col h-[400px] lg:h-full min-h-0 overflow-hidden">
             <ImageResult status={status} imageBase64={resultImage} />
           </div>
 

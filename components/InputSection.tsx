@@ -24,7 +24,9 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
       const items = e.clipboardData?.items;
       if (!items) return;
 
-      for (const item of items) {
+      // Iterate using index to avoid iterator issues on some DataTransferItemList implementations
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
         if (item.type.indexOf('image') !== -1) {
           const file = item.getAsFile();
           if (file) {
@@ -40,7 +42,8 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
   }, []);
 
   const handleFileSelect = (file: File) => {
-    if (!file.type.startsWith('image/')) return;
+    // Safety check for file existence and type
+    if (!file || typeof file.type !== 'string' || !file.type.startsWith('image/')) return;
     
     setImageFile(file);
     const reader = new FileReader();
@@ -78,7 +81,7 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
       <div className="flex-grow flex flex-col gap-4 min-h-0">
         
         {/* 1. Text Input */}
-        <div className="flex-1 min-h-[200px] glass-panel rounded-xl p-4 flex flex-col relative focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
+        <div className="flex-1 min-h-[100px] glass-panel rounded-xl p-4 flex flex-col relative focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
           <div className="flex items-center gap-2 mb-2 text-gray-400">
             <Type size={16} />
             <span className="text-xs font-medium uppercase tracking-wider">Prompt / Idea (Optional)</span>
@@ -94,7 +97,7 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
 
         {/* 2. Image Input */}
         <div 
-          className={`flex-1 min-h-[200px] glass-panel rounded-xl p-4 flex flex-col relative transition-all duration-200
+          className={`flex-1 min-h-[100px] glass-panel rounded-xl p-4 flex flex-col relative transition-all duration-200
             ${isDragOver ? 'border-blue-500 bg-blue-500/10' : ''}
             ${!imageBase64 ? 'hover:bg-white/5 cursor-pointer' : ''}
           `}
@@ -138,14 +141,18 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
             ref={fileInputRef} 
             className="hidden" 
             accept="image/*"
-            onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])}
+            onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            }}
           />
         </div>
 
       </div>
 
       {/* Settings Row */}
-      <div className="glass-panel rounded-xl p-3 flex flex-wrap gap-4 items-center justify-between">
+      <div className="glass-panel rounded-xl p-3 flex flex-wrap gap-4 items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
            {/* Aspect Ratio */}
            <div className="flex items-center gap-2">
@@ -188,7 +195,7 @@ const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
         onClick={handleSubmit}
         disabled={isLoading || (!text && !imageBase64)}
         className={`
-          w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-lg
+          w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-lg flex-shrink-0
           flex items-center justify-center gap-2
           ${isLoading 
             ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
