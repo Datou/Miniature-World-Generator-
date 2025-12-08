@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AppStatus, EngineeredPrompt, UserInput } from './types';
 import { engineerPrompt, generatePosterImage } from './services/geminiService';
@@ -37,7 +38,9 @@ const App: React.FC = () => {
     setResultImage(null);
 
     try {
-      const engineeredData = await engineerPrompt(input.text, input.imageBase64);
+      // Pass navigator.language to service for localization
+      const userLocale = navigator.language;
+      const engineeredData = await engineerPrompt(input.text, input.imageBase64, userLocale);
       setPromptData(engineeredData);
 
       setStatus(AppStatus.GENERATING_IMAGE);
@@ -74,7 +77,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-gray-200 selection:bg-blue-500/30 flex flex-col relative">
+    <div className="min-h-screen w-full bg-[#0d1117] text-gray-200 selection:bg-blue-500/30 flex flex-col relative overflow-x-hidden">
       {/* Background Ambience */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
@@ -112,21 +115,21 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* Main Content - Responsive Grid */}
-        <main className="flex-grow flex flex-col lg:grid lg:grid-cols-3 gap-6 w-full lg:h-[calc(100vh-160px)] min-h-0 pb-4">
+        {/* Main Content - Grid on Desktop, Stack on Mobile */}
+        <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6 w-full lg:min-h-[600px] pb-8">
           
           {/* Column 1: Input */}
-          <div className="w-full h-auto lg:h-full min-h-[500px] flex flex-col">
+          <div className="flex flex-col lg:h-auto">
             <InputSection status={status} onSubmit={handleGenerate} />
           </div>
 
           {/* Column 2: Prompt Engineering */}
-          <div className="w-full h-auto lg:h-full min-h-[300px] flex flex-col">
+          <div className="flex flex-col min-h-[400px] lg:h-auto">
             <PromptDisplay status={status} promptData={promptData} />
           </div>
 
           {/* Column 3: Result */}
-          <div className="w-full h-auto lg:h-full min-h-[400px] flex flex-col">
+          <div className="flex flex-col min-h-[400px] lg:h-auto">
             <ImageResult status={status} imageBase64={resultImage} />
           </div>
 

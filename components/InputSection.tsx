@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload, X, Type, Image as ImageIcon, Sparkles, Settings2 } from 'lucide-react';
 import { AppStatus, UserInput, AspectRatio, ImageSize } from '../types';
-import { Upload, X, ArrowRight, Loader2, Settings2 } from 'lucide-react';
 
 interface InputSectionProps {
   status: AppStatus;
@@ -10,218 +11,203 @@ interface InputSectionProps {
 const InputSection: React.FC<InputSectionProps> = ({ status, onSubmit }) => {
   const [text, setText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('9:16');
-  const [imageSize, setImageSize] = useState<ImageSize>('4K');
-  
+  const [imageSize, setImageSize] = useState<ImageSize>('1K');
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    processFile(file);
-  };
+  // Handle Paste Event Globally within the component
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
-  const processFile = (file: File | undefined) => {
-    if (file && file.type.startsWith('image/')) {
-        setImageFile(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    if (isProcessing) return;
-    
-    // Check if there are files in clipboard
-    if (e.clipboardData.files.length > 0) {
-        const file = e.clipboardData.files[0];
-        if (file.type.startsWith('image/')) {
+      for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          if (file) {
+            handleFileSelect(file);
             e.preventDefault();
-            processFile(file);
+          }
         }
-    }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, []);
+
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImageBase64(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const clearImage = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setImageFile(null);
-    setPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
   };
 
   const handleSubmit = () => {
-    if (!text && !imageFile) return;
-    
+    if (!text && !imageBase64) return;
     onSubmit({
       text,
       image: imageFile,
-      imageBase64: preview, 
+      imageBase64,
       aspectRatio,
-      imageSize
+      imageSize,
     });
   };
 
-  const isProcessing = status === AppStatus.ANALYZING || status === AppStatus.GENERATING_IMAGE;
+  const isLoading = status === AppStatus.ANALYZING || status === AppStatus.GENERATING_IMAGE;
 
   return (
-    <div 
-        ref={containerRef}
-        className="h-full flex flex-col p-6 gap-5 glass-panel rounded-2xl outline-none"
-        onPaste={handlePaste}
-        tabIndex={0} // Enable div to capture paste events when focused
-    >
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-          Input
-        </h2>
-        <p className="text-sm text-gray-400">
-          Describe a city, stock, poem, mood, or upload a reference image.
-        </p>
-      </div>
-
-      {/* Settings Row */}
-      <div className="flex gap-4 p-3 bg-gray-800/30 rounded-lg border border-gray-700/30">
-        <div className="flex-1 space-y-1">
-            <label className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                <Settings2 size={12} /> Aspect Ratio
-            </label>
-            <select 
-                value={aspectRatio}
-                onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                disabled={isProcessing}
-                className="w-full bg-gray-900 border border-gray-700 rounded-md px-2 py-1.5 text-sm text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none"
-            >
-                <option value="9:16">9:16 (Portrait)</option>
-                <option value="16:9">16:9 (Landscape)</option>
-                <option value="1:1">1:1 (Square)</option>
-                <option value="3:4">3:4 (Portrait)</option>
-                <option value="4:3">4:3 (Landscape)</option>
-            </select>
-        </div>
-        <div className="flex-1 space-y-1">
-            <label className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                <Settings2 size={12} /> Resolution
-            </label>
-            <select 
-                value={imageSize}
-                onChange={(e) => setImageSize(e.target.value as ImageSize)}
-                disabled={isProcessing}
-                className="w-full bg-gray-900 border border-gray-700 rounded-md px-2 py-1.5 text-sm text-gray-200 focus:ring-1 focus:ring-blue-500 outline-none"
-            >
-                <option value="4K">4K (Ultra HD)</option>
-                <option value="2K">2K (Quad HD)</option>
-                <option value="1K">1K (Full HD)</option>
-            </select>
-        </div>
-      </div>
-
-      {/* Inputs Container - Equal Sizing */}
+    <div className="h-full flex flex-col gap-4">
+      
+      {/* Main Input Area - Flex container to keep boxes equal size */}
       <div className="flex-grow flex flex-col gap-4 min-h-0">
-          {/* Text Area */}
-          <div className="relative flex-1 min-h-[140px]">
-            <textarea
-              className="w-full h-full p-4 bg-gray-850/50 border border-gray-700/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none resize-none text-gray-200 placeholder-gray-600 transition-all text-sm"
-              placeholder="Try: 'Weather in London', 'NVIDIA Stock', 'A cozy cabin in snow', or a classic poem..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={isProcessing}
-            />
+        
+        {/* 1. Text Input */}
+        <div className="flex-1 min-h-[200px] glass-panel rounded-xl p-4 flex flex-col relative focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
+          <div className="flex items-center gap-2 mb-2 text-gray-400">
+            <Type size={16} />
+            <span className="text-xs font-medium uppercase tracking-wider">Prompt / Idea (Optional)</span>
+          </div>
+          <textarea
+            className="flex-grow w-full bg-transparent border-none outline-none resize-none text-gray-200 placeholder-gray-600 custom-scrollbar text-base leading-relaxed"
+            placeholder="Describe your miniature world... (e.g., 'A cyberpunk ramen shop inside an old radio')"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* 2. Image Input */}
+        <div 
+          className={`flex-1 min-h-[200px] glass-panel rounded-xl p-4 flex flex-col relative transition-all duration-200
+            ${isDragOver ? 'border-blue-500 bg-blue-500/10' : ''}
+            ${!imageBase64 ? 'hover:bg-white/5 cursor-pointer' : ''}
+          `}
+          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={onDrop}
+          onClick={() => !imageBase64 && fileInputRef.current?.click()}
+        >
+          <div className="flex items-center justify-between mb-2 text-gray-400 z-10">
+            <div className="flex items-center gap-2">
+              <ImageIcon size={16} />
+              <span className="text-xs font-medium uppercase tracking-wider">Reference (Optional)</span>
+            </div>
+            {imageBase64 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); setImageBase64(null); setImageFile(null); }}
+                className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded-md transition-colors"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          {/* Image Upload */}
-          <div className="relative group flex-1 min-h-[140px]">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-              disabled={isProcessing}
-            />
-            
-            {!preview ? (
-              <div 
-                onClick={() => !isProcessing && fileInputRef.current?.click()}
-                className={`
-                  w-full h-full border-2 border-dashed border-gray-700 rounded-xl 
-                  flex flex-col items-center justify-center gap-2 
-                  text-gray-500 cursor-pointer transition-all
-                  ${!isProcessing ? 'hover:border-blue-500/50 hover:bg-gray-800/50' : 'opacity-50 cursor-not-allowed'}
-                `}
-              >
-                <Upload size={20} />
-                <div className="flex flex-col items-center">
-                    <span className="text-xs font-medium">Upload Reference (Optional)</span>
-                    <span className="text-[10px] text-gray-600 mt-1">Click or Paste Image</span>
-                </div>
-              </div>
+          <div className="flex-grow flex items-center justify-center relative overflow-hidden rounded-lg bg-black/20 border border-gray-800/50 border-dashed">
+            {imageBase64 ? (
+              <img 
+                src={imageBase64} 
+                alt="Reference" 
+                className="w-full h-full object-contain" 
+              />
             ) : (
-              <div 
-                className="relative w-full h-full rounded-xl border border-gray-700 bg-gray-900/50 flex items-center justify-center overflow-hidden"
-                onClick={() => !isProcessing && fileInputRef.current?.click()}
-              >
-                <img 
-                  src={preview} 
-                  alt="Preview" 
-                  className="w-full h-full object-contain" 
-                />
-                {!isProcessing && (
-                  <button 
-                    onClick={clearImage}
-                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-red-500/80 text-white rounded-full backdrop-blur-sm transition-colors z-10"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-                 <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/60 rounded text-[10px] text-gray-300 backdrop-blur-md pointer-events-none">
-                    Reference
-                 </div>
+              <div className="text-center p-4">
+                <Upload size={24} className="mx-auto mb-3 text-gray-600" />
+                <p className="text-sm text-gray-400">Click or Paste Image</p>
+                <p className="text-xs text-gray-600 mt-1">Ctrl+V supported</p>
               </div>
             )}
           </div>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept="image/*"
+            onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])}
+          />
+        </div>
+
+      </div>
+
+      {/* Settings Row */}
+      <div className="glass-panel rounded-xl p-3 flex flex-wrap gap-4 items-center justify-between">
+        <div className="flex items-center gap-4">
+           {/* Aspect Ratio */}
+           <div className="flex items-center gap-2">
+              <Settings2 size={14} className="text-gray-500" />
+              <select 
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+                className="bg-transparent text-xs text-gray-300 outline-none cursor-pointer hover:text-white"
+                disabled={isLoading}
+              >
+                <option value="1:1" className="bg-gray-800 text-gray-200">1:1 Square</option>
+                <option value="3:4" className="bg-gray-800 text-gray-200">3:4 Portrait</option>
+                <option value="4:3" className="bg-gray-800 text-gray-200">4:3 Landscape</option>
+                <option value="9:16" className="bg-gray-800 text-gray-200">9:16 Mobile</option>
+                <option value="16:9" className="bg-gray-800 text-gray-200">16:9 Cinema</option>
+              </select>
+           </div>
+           
+           <div className="w-px h-4 bg-gray-700"></div>
+
+           {/* Size (Simulated for UI) */}
+           <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 font-medium">Size</span>
+              <select 
+                value={imageSize}
+                onChange={(e) => setImageSize(e.target.value as ImageSize)}
+                className="bg-transparent text-xs text-gray-300 outline-none cursor-pointer hover:text-white"
+                disabled={isLoading}
+              >
+                <option value="1K" className="bg-gray-800 text-gray-200">1K</option>
+                <option value="2K" className="bg-gray-800 text-gray-200">2K</option>
+                <option value="4K" className="bg-gray-800 text-gray-200">4K</option>
+              </select>
+           </div>
+        </div>
       </div>
 
       {/* Submit Button */}
       <button
         onClick={handleSubmit}
-        disabled={isProcessing || (!text && !imageFile)}
+        disabled={isLoading || (!text && !imageBase64)}
         className={`
-          w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2
-          transition-all duration-300 shadow-lg text-sm shrink-0
-          ${isProcessing || (!text && !imageFile)
+          w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all shadow-lg
+          flex items-center justify-center gap-2
+          ${isLoading 
             ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
             : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/20'
           }
         `}
       >
-        {isProcessing ? (
+        {isLoading ? (
           <>
-            <Loader2 className="animate-spin" size={18} />
+            <span className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
             <span>Processing...</span>
           </>
         ) : (
           <>
-            <span>Generate Miniature</span>
-            <ArrowRight size={18} />
+            <Sparkles size={18} />
+            <span>Generate Miniature World</span>
           </>
         )}
       </button>
-
-      {/* Status Messages */}
-      {status === AppStatus.ANALYZING && (
-        <div className="text-xs text-center text-blue-400 animate-pulse shrink-0">
-          Analyzing intent & gathering real-time data (Gemini 3 Pro)...
-        </div>
-      )}
-      {status === AppStatus.GENERATING_IMAGE && (
-        <div className="text-xs text-center text-purple-400 animate-pulse shrink-0">
-          Rendering {imageSize} 3D scene (Nano Banana Pro)...
-        </div>
-      )}
     </div>
   );
 };

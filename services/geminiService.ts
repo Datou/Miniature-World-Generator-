@@ -7,42 +7,59 @@ const getAiClient = () => {
 
 // ============================================================================
 // 1. SYSTEM INSTRUCTION
-// Optimized for "Poster Layout" (Text Space + Floating Island)
+// Optimized for Strict Language Priority & Layout Enforcement
 // ============================================================================
 const PROMPT_ENGINEERING_SYSTEM_INSTRUCTION = `
 You are a world-class Prompt Engineer and Art Director.
 You have access to Google Search.
 
+**CRITICAL PROTOCOL - LANGUAGE PRIORITY (STRICT ORDER):**
+You must determine the **Target Output Language** based on the following hierarchy. STOP at the first matching rule:
+
+1.  **PRIORITY 1: USER INPUT TEXT (The Boss)**
+    *   **Rule:** If the user has typed ANY text input (even a single word like "Cool"), detect the language of that input.
+    *   **Action:** The Title and Subtitle MUST match the **User Input's language**.
+    *   *Example:* User types "Hello" (English) + Image contains Japanese text. -> **OUTPUT: ENGLISH.**
+    *   *Example:* User types "只狼" (Chinese) + Image contains English text. -> **OUTPUT: CHINESE.**
+
+2.  **PRIORITY 2: REFERENCE IMAGE TEXT (The Context)**
+    *   **Condition:** ONLY if User Input is EMPTY.
+    *   **Rule:** Analyze the Reference Image. Does it contain visible, legible text (e.g., Movie Poster Title, Book Cover)?
+    *   **Action:** If yes, use the dominant language found in the image.
+    *   *Example:* User input is empty + Image is the "Lang Lang Mountain" poster (Chinese). -> **OUTPUT: CHINESE.**
+
+3.  **PRIORITY 3: SYSTEM LOCALE (The Fallback)**
+    *   **Condition:** ONLY if User Input is EMPTY AND Image has NO TEXT.
+    *   **Rule:** Look at the provided 'User System Locale'.
+    *   **Action:** Generate the Title/Subtitle in that locale's language.
+    *   *Example:* Empty input + Landscape photo + Locale 'zh-CN'. -> **OUTPUT: CHINESE.**
+
+4.  **PRIORITY 4: DEFAULT**
+    *   **Action:** English.
+
 **CRITICAL LAYOUT RULE: THE "VERTICAL POSTER COMPOSITION"**
-You are NOT just generating a 3D object. You are generating a **POSTER**.
 1.  **Split Composition:**
-    *   **Top 20%:** Empty negative space for the TITLE.
+    *   **Top 20%:** Negative space for TITLE.
     *   **Middle 60%:** The 3D Floating Isometric Island (The Subject).
-    *   **Bottom 20%:** Empty negative space for the SUBTITLE/DATA.
-2.  **Camera Distance:** The camera MUST be zoomed out ("Wide Shot") to ensure the 3D object does not touch the text areas.
+    *   **Bottom 20%:** Negative space for SUBTITLE.
+2.  **Zoom:** Camera must be zoomed out (0.5x) to prevent cropping.
 
 **INPUT HANDLING STRATEGY:**
 
-**CASE A: REAL-TIME DATA (Stocks / Weather)**
-1.  **Tool:** Search for live data.
-2.  **Visual:** Create a **Floating Concept Art** representing the data.
-    *   *Example:* "A glass tree with golden apples" (Good Stock) or "A storm over a stone fortress" (Bad Stock).
-3.  **Subtitle:** STRICTLY the data found (e.g., "$242.50 ▲ +1.25%").
+**CASE A: REFERENCE IMAGE (Style Transfer)**
+- **Action:** Extract the subject and place it on a centralized isometric base.
+- **Visuals:** Describe the scene in English for the generator, but specify the *render text* string in the **Target Output Language** determined above.
 
-**CASE B: POETRY / STORY**
-1.  **Visual:** A "Frozen Moment" on a diorama base.
-2.  **Text:** Full Title + Key Verse.
-
-**CASE C: REFERENCE IMAGE**
-1.  **Action:** "Extract the subject and place it on a new clean isometric base."
-2.  **Constraint:** Keep the subject in the MIDDLE 60% zone.
+**CASE B: REAL-TIME DATA (Stocks/Weather)**
+- **Tool:** Search for live data.
+- **Language:** Use the **Target Output Language** for the Subject Name. Keep numbers universal.
 
 **OUTPUT FORMAT (JSON):**
 Structure:
 {
-  "posterTitle": "The Title String",
-  "posterSubtitle": "The Subtitle String",
-  "visualPrompt": "The detailed prompt. IMPORTANT: You MUST explicitly include the text instructions inside this string. Example: '...Render the text [Title] in the top space. Render the text [Subtitle] in the bottom space.'"
+  "posterTitle": "Title in Target Language",
+  "posterSubtitle": "Subtitle in Target Language",
+  "visualPrompt": "The detailed prompt in ENGLISH. BUT, inside the text instructions, use the Target Language strings. Example: 'Render the text [小妖怪] in the top space...'"
 }
 `;
 
@@ -51,9 +68,11 @@ Structure:
 // ============================================================================
 export const engineerPrompt = async (
   inputText: string, 
-  imageBase64: string | null
+  imageBase64: string | null,
+  userLocale: string = "en-US" 
 ): Promise<EngineeredPrompt> => {
   try {
+    // Use gemini-3-pro-preview for maximum reasoning capability
     const modelId = "gemini-3-pro-preview"; 
     const ai = getAiClient();
     
@@ -68,18 +87,29 @@ export const engineerPrompt = async (
       });
     }
     
-    // Explicitly prompt for search if keywords are present
+    // Check for data keywords to trigger search tool
     let finalInputText = inputText;
-    const dataKeywords = ["stock", "price", "weather", "news", "score", "bitcoin", "btc", "eth"];
-    if (dataKeywords.some(kw => inputText.toLowerCase().includes(kw))) {
-        finalInputText = `User Query: "${inputText}". \nINSTRUCTION: USE GOOGLE SEARCH to find the current live data value. Put the EXACT number in the 'posterSubtitle'.`;
+    const dataKeywords = ["stock", "price", "weather", "news", "score"];
+    // Simple check: if input exists and matches keywords
+    const needsSearch = inputText && dataKeywords.some(kw => inputText.toLowerCase().includes(kw));
+    
+    if (needsSearch) {
+        finalInputText = `User Query: "${inputText}". \nINSTRUCTION: USE GOOGLE SEARCH to find the current live data value.`;
     }
 
-    const userMessage = finalInputText 
-      ? `User Request: ${finalInputText}` 
-      : "User provided an image. Create a 3D Miniature Isometric Poster concept.";
+    // Explicitly pass the metadata to the System Prompt logic
+    const contextMessage = `
+    [METADATA FOR LANGUAGE LOGIC]
+    1. User Input Text: "${finalInputText || ""}" (If not empty, this is PRIORITY 1)
+    2. Reference Image Provided: ${imageBase64 ? "YES" : "NO"} (If Input is empty, check this for text -> PRIORITY 2)
+    3. User System Locale: "${userLocale}" (Fallback -> PRIORITY 3)
+    
+    [TASK]
+    Determine the Target Language based on the Priority Rules.
+    Create a 3D Miniature Isometric Poster concept.
+    `;
 
-    parts.push({ text: userMessage });
+    parts.push({ text: contextMessage });
 
     let response;
     let attempts = 0;
@@ -103,7 +133,24 @@ export const engineerPrompt = async (
         }
     }
 
-    if (!response || !response.text) throw new Error("No response text");
+    // Enhanced Error Handling
+    if (!response) throw new Error("No response from AI service.");
+    
+    // Check if the model blocked the response
+    if (response.candidates && response.candidates.length > 0) {
+        const candidate = response.candidates[0];
+        if (candidate.finishReason !== "STOP" && candidate.finishReason !== "MAX_TOKENS") {
+             // If we have no text but a finish reason, it might be safety or other
+             if (!response.text) {
+                 console.warn("Generation stopped. Finish Reason:", candidate.finishReason);
+                 throw new Error(`AI generation stopped: ${candidate.finishReason}`);
+             }
+        }
+    }
+
+    if (!response.text) {
+        throw new Error("The AI returned an empty response. Please try again with a different prompt or image.");
+    }
 
     let jsonString = response.text.trim();
     if (jsonString.includes('{')) {
@@ -134,7 +181,7 @@ export const engineerPrompt = async (
 };
 
 // ============================================================================
-// 3. GENERATE POSTER IMAGE FUNCTION (Layout & Typography Enforcement)
+// 3. GENERATE POSTER IMAGE FUNCTION
 // ============================================================================
 export const generatePosterImage = async (
   visualPrompt: string, 
@@ -149,8 +196,7 @@ export const generatePosterImage = async (
     const parts: any[] = [];
     let finalPromptText = visualPrompt;
 
-    // --- KEY MODIFICATION: LAYOUT & TYPOGRAPHY CONSTRAINT ---
-    // We force a "Wide Shot" and explicitly reserve space for text.
+    // Layout Constraint Logic
     const layoutConstraint = `
     [LAYOUT RULES: VERTICAL POSTER]
     1. CAMERA: Wide Shot / Zoom Out (0.5x). The 3D object must be SMALLER than the canvas.
@@ -158,9 +204,9 @@ export const generatePosterImage = async (
     3. CENTER: The 3D Floating Island must be strictly in the MIDDLE.
     
     [TYPOGRAPHY INSTRUCTION]
-    - Render the TITLE explicitly in the top empty space. Use large, legible, 3D or bold font.
-    - Render the SUBTITLE/DATA explicitly in the bottom empty space. Use clear, contrasting font.
-    - DO NOT overlay text on the 3D model. Keep text on the clean background.
+    - Render the TITLE explicitly in the top empty space. 
+    - Render the SUBTITLE explicitly in the bottom empty space.
+    - FONT: Use a font that matches the language of the text provided in the prompt (e.g. Calligraphy for Chinese, Sans-serif for English).
     `;
 
     if (referenceImageBase64) {
@@ -184,13 +230,10 @@ export const generatePosterImage = async (
       ${visualPrompt}
       `;
     } else {
-      // TEXT ONLY MODE
       finalPromptText = `
       ${layoutConstraint}
-
       [SYSTEM: GENERATION MODE]
       Action: Create a self-contained miniature world.
-      
       [VISUAL DESCRIPTION]
       ${visualPrompt}
       `;
